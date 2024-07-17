@@ -27,6 +27,33 @@ const filesTypes = [
   { name: "🗃️ Other files", value: "OTHER_FILES" },
 ];
 
+function isGitRepositotyInFolder() {
+  return new Promise((resolve, reject) => {
+    exec("git rev-parse --is-inside-work-tree", (error, stdout, stderr) => {
+      if (error) {
+        if (error.message.includes("not")) {
+          resolve(false);
+          return;
+        }
+
+        reject(error);
+        return;
+      }
+
+      if (stderr) {
+        reject(new Error(stderr));
+        return;
+      }
+
+      if (stdout.trim() === "true" || stdout.trim().includes("true")) {
+        resolve(true);
+      } else {
+        resolve(false);
+      }
+    });
+  });
+}
+
 function askCommitType() {
   return inquirer.default.prompt([
     {
@@ -200,6 +227,17 @@ async function commit(files, type, message, description, args) {
 
 async function main() {
   try {
+    const isGitRepository = await isGitRepositotyInFolder();
+
+    if (!isGitRepository) {
+      const currentDirectory = process.cwd();
+      console.log(
+        `${TEXT.COLOR.RED}🚫 O diretório '${currentDirectory}' não está dentro de um repositório Git.`
+      );
+      process.exit();
+      return;
+    }
+
     const commitFiles = await askFilesType();
     const commitType = await askCommitType();
     const commitMessage = await askCommitMessage();
