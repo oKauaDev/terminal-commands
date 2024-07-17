@@ -186,8 +186,9 @@ async function commit(files, type, message, description, args) {
   const confirm = await confirmCommandLine(commands);
 
   if (confirm.confirmCommands) {
+    console.log("📝 Adicionando os arquivos...");
     dispatchCommand(commands[0], (error, stdout, stderr) => {
-      console.log("📝 Criando commit e adicionando os arquivos...");
+      console.log("📦 Criando o pacote do commit...");
       dispatchCommand(commands[1], (error, stdout, stderr) => {
         console.log("🚀 Enviando commit...");
         dispatchCommand(commands[2], (error, stdout, stderr) => {
