@@ -162,6 +162,8 @@ function dispatchCommand(command, callback) {
       return;
     }
     if (stderr) {
+      console.log(stderr);
+
       console.log(`${TEXT.COLOR.RED}❌ Erro: ${TEXT.COLOR.YELLOW}${stderr}`);
       return;
     }
