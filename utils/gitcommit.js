@@ -213,7 +213,7 @@ async function commit(files, type, message, description, args) {
       dispatchCommand(commands[1], (error, stdout, stderr) => {
         console.log("🚀 Enviando commit...");
         dispatchCommand(commands[2], (error, stdout, stderr) => {
-          console.log(`${TEXT.COLOR.GREEN}✅ Commit enviado com sucesso: ${stdout}`);
+          console.log(`${TEXT.COLOR.GREEN}✅ Commit enviado com sucesso!`);
         });
       });
     });
