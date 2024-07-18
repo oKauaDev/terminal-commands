@@ -230,7 +230,8 @@ async function main() {
     const isGitRepository = await isGitRepositotyInFolder();
 
     if (!isGitRepository) {
-      const currentDirectory = process.cwd();
+      const directory = process.cwd().split(/[\/\\]/g);
+      const currentDirectory = directory[directory.length - 1];
       console.log(
         `${TEXT.COLOR.RED}🚫 O diretório '${currentDirectory}' não está dentro de um repositório Git.`
       );
