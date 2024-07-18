@@ -21,7 +21,6 @@ const commitTypes = [
 
 const filesTypes = [
   { name: "📂 All files", value: "." },
-  { name: "🗄️ -A", value: "-A" },
   { name: "📁 Only changed", value: "--staged" },
   { name: "📄 Only untracked", value: "--untracked-files=no" },
   { name: "🗃️ Other files", value: "OTHER_FILES" },
@@ -70,7 +69,7 @@ async function askFilesType() {
     {
       type: "list",
       name: "filesTypes",
-      message: "Escolha os arquivos que deseja alterar:",
+      message: "Escolha os arquivos que deseja adicionar ao commit:",
       choices: filesTypes,
     },
   ]);
@@ -183,9 +182,7 @@ function confirmCommandLine(commands) {
 function dispatchCommand(command, callback) {
   exec(command, (error, stdout, stderr) => {
     if (error) {
-      console.log(
-        `${TEXT.COLOR.RED}❌ Erro ao enviar o commit: ${TEXT.COLOR.YELLOW}${error.message}`
-      );
+      console.log(`${TEXT.COLOR.RED}❌ Erro: ${TEXT.COLOR.YELLOW}${error.message}`);
       return;
     }
 
@@ -216,12 +213,126 @@ async function commit(files, type, message, description, args) {
       dispatchCommand(commands[1], (error, stdout, stderr) => {
         console.log("🚀 Enviando commit...");
         dispatchCommand(commands[2], (error, stdout, stderr) => {
-          console.log(`${TEXT.COLOR.GREEN} ✅ Commit enviado com sucesso: ${stdout}`);
+          console.log(`${TEXT.COLOR.GREEN}✅ Commit enviado com sucesso: ${stdout}`);
         });
       });
     });
   } else {
     console.log(`${TEXT.COLOR.RED}🚫 Execução dos comandos cancelada pelo usuário.`);
+  }
+}
+
+async function createGitRepository(foldername) {
+  let commands = ["git init"];
+
+  const { isCreate } = await inquirer.default.prompt([
+    {
+      type: "confirm",
+      name: "isCreate",
+      message: `🚫 O diretório '${foldername}' não está dentro de um repositório Git, deseja criar um repositório ?`,
+    },
+  ]);
+
+  if (isCreate) {
+    const { filesTypes } = await askFilesType();
+
+    commands.push("git add " + filesTypes);
+    commands.push(`git commit -m "first commit"`);
+
+    const isGithub = await inquirer.default.prompt([
+      {
+        type: "confirm",
+        name: "isGithub",
+        message: `Deseja criar uma branch main ? (necessário caso esteja usando o Github)`,
+        default: true,
+      },
+    ]);
+
+    if (isGithub) {
+      commands.push("git branch -M main");
+    }
+
+    const { repository } = await inquirer.default.prompt([
+      {
+        type: "input",
+        name: "repository",
+        message: `Digite a URL git do repositório aqui (opcional):`,
+        validate: (input) => {
+          if (input) {
+            const gitRepositoryValidate = /^https?:\/\/[\w\.\\\/]+\.git\/?\\?$/g;
+
+            if (!gitRepositoryValidate.test(input)) {
+              return "⚠️ Digite uma URL git válida, ela deve começar com http:// ou https:// e terminar com .git";
+            }
+          }
+
+          return true;
+        },
+      },
+    ]);
+
+    if (repository && repository.length > 0) {
+      commands.push(`git remote add origin ${repository}`);
+    }
+
+    if (isGithub) {
+      commands.push(`git push -u origin main`);
+    } else {
+      commands.push(`git push`);
+    }
+
+    function continueToPush(github) {
+      const some = github ? 1 : 0;
+
+      console.log("🌐 Adicionando a origem do repositório...");
+      dispatchCommand(commands[3 + some], (error, stdout, stderr) => {
+        console.log("🚀 Realizando o push no repositorio...");
+        dispatchCommand(commands[4 + some], (error, stdout, stderr) => {
+          console.log(
+            `${TEXT.COLOR.GREEN}✅ Git criado com sucesso, o primeiro commit foi feito com sucesso!`
+          );
+        });
+      });
+    }
+
+    let commandsString = "";
+
+    commands.forEach((command) => {
+      commandsString += `• ${command}\n`;
+    });
+
+    const { confirmCommands } = await inquirer.default.prompt([
+      {
+        type: "confirm",
+        name: "confirmCommands",
+        message: `Vamos executar os seguintes comandos no terminal para criar o repositório e enviar o primeiro commit:\n\n${commandsString}\n\nDeseja continuar?`,
+      },
+    ]);
+
+    if (confirmCommands) {
+      console.log("📦 Iniciando repositório...");
+      dispatchCommand(commands[0], (error, stdout, stderr) => {
+        console.log("🗃️ Adicionando arquivos...");
+        dispatchCommand(commands[1], (error, stdout, stderr) => {
+          console.log("✍️ Realizando o commit inicial...");
+          dispatchCommand(commands[2], (error, stdout, stderr) => {
+            if (isGithub) {
+              console.log("🌿 Criando a branch main padrão do github...");
+              dispatchCommand(commands[3], (error, stdout, stderr) => {
+                continueToPush(true);
+              });
+            } else {
+              continueToPush(false);
+            }
+          });
+        });
+      });
+    } else {
+      console.log(`${TEXT.COLOR.RED}🚫 Execução dos comandos cancelada pelo usuário.`);
+    }
+  } else {
+    console.log(`${TEXT.COLOR.RED}🚫 O usuário não quiz criar o repositório nesse diretório.`);
+    process.exit();
   }
 }
 
@@ -232,10 +343,7 @@ async function main() {
     if (!isGitRepository) {
       const directory = process.cwd().split(/[\/\\]/g);
       const currentDirectory = directory[directory.length - 1];
-      console.log(
-        `${TEXT.COLOR.RED}🚫 O diretório '${currentDirectory}' não está dentro de um repositório Git.`
-      );
-      process.exit();
+      await createGitRepository(currentDirectory);
       return;
     }
 
